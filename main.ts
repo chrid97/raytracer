@@ -1,4 +1,6 @@
 import { Vec3, createVector, Point, subtract, dotProduct, vecLength, add, multiply } from './vector.js';
+import { Sphere, createSphere } from './sphere.js';
+import { Light, createLighting, createLightSource } from './lighting.js';
 
 const canvas = <HTMLCanvasElement>document.getElementById('canvas');
 let ctx = canvas.getContext('2d');
@@ -26,51 +28,11 @@ function putPixel(x: number, y: number, color: Point): void {
     imgData.data[offset++] = 255;
 }
 
-
-interface light {
-    type: number;
-    intensity: number;
-    position: Point;
-}
-
-function createLightSource(type: number, intensity: number, position: Vec3): light {
-    return {
-        type,
-        intensity,
-        position
-    }
-}
-
 const lights = [
     createLightSource(0, 0.2, {x: 1, y: 1, z: 1}),
     createLightSource(1, 0.6, {x: 2, y: 1, z: 0}),
     createLightSource(2, 0.2, {x: 1, y: 4, z: 4})
 ];
-
-function createLighting(point: Point, normal: Point): number {
-    let intensity = 0;
-    let length_n = vecLength(normal);
-    
-    for(let i = 0; i < lights.length; i++) {
-        if(lights[i].type === 0) {
-            intensity += lights[i].intensity;
-        } else {
-            let lightVector = createVector(0, 0, 0);
-            if(lights[i].type === 1) {
-                lightVector = subtract(lights[i].position, point);
-            } else {
-                lightVector = lights[i].position;
-            }
-
-            const n_dot_l = dotProduct(normal, lightVector);
-            if(n_dot_l > 0) {
-                intensity += lights[i].intensity * n_dot_l / (length_n * vecLength(lightVector));
-            }
-        }
-    }
-
-    return intensity;
-}
 
 type Color = [number, number, number];
 
@@ -78,23 +40,6 @@ interface Ray {
     origin: Point;
     direction: Vec3;
     // tMax: number;
-}
-
-interface Sphere {
-    center: Vec3;
-    radius: number;
-    color: Color;
-
-    // doesRayIntersect: (origin: Vec3, direction: Vec3, t0: number) => boolean;
-    // castRay(origin: Vec3, direction: Vec3, sphere: Sphere): Vec3;
-}
-
-function createSphere(center: Vec3, radius: number, color: Color): Sphere {
-    return {
-        center,
-        radius, 
-        color
-    }
 }
 
 function canvasToViewport(p2d: [number, number]): Vec3 {
@@ -175,7 +120,7 @@ function castRay(ray: Ray, min_t: number, max_t: number): Vec3 {
         return {
             x: backgroundColor[0],
             y: backgroundColor[1],
-            z: backgroundColor[2],
+            z: backgroundColor[2],    // change color to a interface
         }
     }
 
@@ -187,7 +132,7 @@ function castRay(ray: Ray, min_t: number, max_t: number): Vec3 {
         x: closest_sphere.color[0],
         y: closest_sphere.color[1],
         z: closest_sphere.color[2]
-    }, createLighting(point, normal));
+    }, createLighting(point, normal, lights));
 }
 
 interface Scene {
@@ -200,12 +145,12 @@ interface Scene {
 
 function createScene(): Scene {
     return {
-        camera: {x: 0, y: 0, z: 0},
+        camera: { x: 0, y: 0, z: 0 },
         objects: [],
         width: canvas.width,
         height: canvas.height
     }
-}
+}    // change color to a interface
 
 function render(img: ImageData): void {
     for(let x = -canvas.width / 2; x < canvas.width / 2; x++) {
