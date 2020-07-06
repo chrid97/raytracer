@@ -1,4 +1,4 @@
-// import { Vec3f, createVector, Point, subtract, dotProduct } from './vector';
+import { Vec3, createVector, Point, subtract, dotProduct, vecLength, add, multiply } from './vector.js';
 
 const canvas = <HTMLCanvasElement>document.getElementById('canvas');
 let ctx = canvas.getContext('2d');
@@ -11,99 +11,85 @@ const img = new Image(canvas.width, canvas.height);
 const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 const canvasPitch = imgData.width * 4;
 
-interface Vec3f {
-    x: number,
-    y: number,
-    z: number,
-}
-
-type Point = Vec3f;
-
-function createVector(x: number, y: number, z: number): Vec3f {
-    return {
-        x,
-        y,
-        z
-    }
-}
-
-function vecLength({ x, y, z }: Vec3f): number {
-    return Math.sqrt(x * x + y * y + z * z);
-}
-
-function normalize(v: Vec3f): Vec3f {
-    const len = vecLength(v); 
-    if(len > 0) {
-        const inverseLen = 1 / len;
-        v.x *= inverseLen;
-        v.y *= inverseLen;
-        v.z *= inverseLen;
-    }
-
-    return v;
-}
-
-function dotProduct(v1: Vec3f, v2: Vec3f): number {
-    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
-}
-
-function subtract(v1: Vec3f, v2: Vec3f): Vec3f {
-    return createVector(
-        v1.x - v2.x,
-        v1.y - v2.y,
-        v1.z - v2.z
-    )
-}
-
-function add(v1: Vec3f, v2: Vec3f): Vec3f {
-    return createVector(
-        v1.x + v2.x,
-        v1.y + v2.y,
-        v1.z + v2.z
-    )
-}
-
-function multiply({ x, y, z }: Vec3f, num: number): Vec3f {
-    return createVector(
-        x * num,
-        y * num,
-        z * num
-    )
-}
-
-function putPixel(x: number, y: number, color: number[]): void {
+function putPixel(x: number, y: number, color: Point): void {
     x = canvas.width / 2 + x;
     y = canvas.height / 2 - y - 1;
 
     if(x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) {
         return;
     }
-
+    // change color to a interface
     let offset = 4 * x + canvasPitch * y;
-    imgData.data[offset++] = color[0];
-    imgData.data[offset++] = color[1];
-    imgData.data[offset++] = color[2];
+    imgData.data[offset++] = color.x;
+    imgData.data[offset++] = color.y;
+    imgData.data[offset++] = color.z;
     imgData.data[offset++] = 255;
+}
+
+
+interface light {
+    type: number;
+    intensity: number;
+    position: Point;
+}
+
+function createLightSource(type: number, intensity: number, position: Vec3): light {
+    return {
+        type,
+        intensity,
+        position
+    }
+}
+
+const lights = [
+    createLightSource(0, 0.2, {x: 1, y: 1, z: 1}),
+    createLightSource(1, 0.6, {x: 2, y: 1, z: 0}),
+    createLightSource(2, 0.2, {x: 1, y: 4, z: 4})
+];
+
+function createLighting(point: Point, normal: Point): number {
+    let intensity = 0;
+    let length_n = vecLength(normal);
+    
+    for(let i = 0; i < lights.length; i++) {
+        if(lights[i].type === 0) {
+            intensity += lights[i].intensity;
+        } else {
+            let lightVector = createVector(0, 0, 0);
+            if(lights[i].type === 1) {
+                lightVector = subtract(lights[i].position, point);
+            } else {
+                lightVector = lights[i].position;
+            }
+
+            const n_dot_l = dotProduct(normal, lightVector);
+            if(n_dot_l > 0) {
+                intensity += lights[i].intensity * n_dot_l / (length_n * vecLength(lightVector));
+            }
+        }
+    }
+
+    return intensity;
 }
 
 type Color = [number, number, number];
 
 interface Ray { 
     origin: Point;
-    direction: Vec3f;
+    direction: Vec3;
     // tMax: number;
 }
 
 interface Sphere {
-    center: Vec3f;
+    center: Vec3;
     radius: number;
     color: Color;
 
-    // doesRayIntersect: (origin: Vec3f, direction: Vec3f, t0: number) => boolean;
-    // castRay(origin: Vec3f, direction: Vec3f, sphere: Sphere): Vec3f;
+    // doesRayIntersect: (origin: Vec3, direction: Vec3, t0: number) => boolean;
+    // castRay(origin: Vec3, direction: Vec3, sphere: Sphere): Vec3;
 }
 
-function createSphere(center: Vec3f, radius: number, color: Color): Sphere {
+function createSphere(center: Vec3, radius: number, color: Color): Sphere {
     return {
         center,
         radius, 
@@ -111,7 +97,7 @@ function createSphere(center: Vec3f, radius: number, color: Color): Sphere {
     }
 }
 
-function canvasToViewport(p2d: [number, number]): Vec3f {
+function canvasToViewport(p2d: [number, number]): Vec3 {
     return {
         x: p2d[0] * viewportSize / canvas.width,
         y: p2d[1] * viewportSize / canvas.height,
@@ -169,7 +155,7 @@ function rayIntersection(sphere: Sphere, ray: Ray): [number, number] {
     return [t1, t2];
 }
 
-function castRay(ray: Ray, min_t: number, max_t: number): number[] {
+function castRay(ray: Ray, min_t: number, max_t: number): Vec3 {
     let closest_t = Infinity;
     let closest_sphere;
     
@@ -186,10 +172,22 @@ function castRay(ray: Ray, min_t: number, max_t: number): number[] {
     }
 
     if(closest_sphere === undefined) {
-        return backgroundColor;
+        return {
+            x: backgroundColor[0],
+            y: backgroundColor[1],
+            z: backgroundColor[2],
+        }
     }
 
-    return closest_sphere.color;
+    const point = add(ray.origin, multiply(ray.direction, closest_t));
+    let normal = subtract(point, closest_sphere.center);
+    normal = multiply(normal, 1.0 / vecLength(normal));
+
+    return multiply({ 
+        x: closest_sphere.color[0],
+        y: closest_sphere.color[1],
+        z: closest_sphere.color[2]
+    }, createLighting(point, normal));
 }
 
 interface Scene {
@@ -217,13 +215,6 @@ function render(img: ImageData): void {
             putPixel(x, y, color);
         }
     }
-    // let data = img.data;
-    // for(let i = 0; i < data.length; i++) {
-    //     data[i] = 128;
-    //     data[i + 1] = 128;
-    //     data[i + 2] = 128;
-    // }
-    // console.log(img);
     ctx!.putImageData(img, 0, 0);
 }
 
