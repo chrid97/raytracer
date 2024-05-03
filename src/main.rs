@@ -1,4 +1,28 @@
-use std::f64::EPSILON;
+struct Canvas {
+    width: usize,
+    height: usize,
+    pixels: Vec<Color>,
+}
+
+impl Canvas {
+    fn new(width: usize, height: usize) -> Self {
+        Self {
+            width,
+            height,
+            pixels: vec![Color::new(0., 0., 0.); width * height],
+        }
+    }
+
+    fn write_pixel(&mut self, x: usize, y: usize, color: Color) {
+        let pos = self.width * x + y;
+        self.pixels[pos] = color;
+    }
+
+    fn pixel_at(&mut self, x: usize, y: usize) -> Color {
+        let pos = self.width * x + y;
+        self.pixels[pos]
+    }
+}
 
 #[derive(Debug, Copy, Clone)]
 struct Vector {
@@ -251,5 +275,21 @@ mod tests {
         let expectecd_b = Vector::new(1., -2., 1.);
         assert_eq!(cross_a, expectecd_a);
         assert_eq!(cross_b, expectecd_b);
+    }
+
+    #[test]
+    fn canvas() {
+        let c = Canvas::new(10, 20);
+        assert_eq!(c.width, 10);
+        assert_eq!(c.height, 20);
+        for pixel in c.pixels {
+            assert_eq!(pixel, Color::new(0., 0., 0.));
+        }
+        {
+            let mut c = Canvas::new(10, 20);
+            let red = Color::new(1., 0., 0.);
+            c.write_pixel(2, 3, red);
+            assert_eq!(c.pixel_at(2, 3), red);
+        }
     }
 }
