@@ -1,3 +1,5 @@
+use std::{fs::File, io::Write, usize};
+
 struct Canvas {
     width: usize,
     height: usize,
@@ -14,13 +16,30 @@ impl Canvas {
     }
 
     fn write_pixel(&mut self, x: usize, y: usize, color: Color) {
-        let pos = self.width * x + y;
+        let pos = self.width * y + x;
         self.pixels[pos] = color;
     }
 
     fn pixel_at(&mut self, x: usize, y: usize) -> Color {
-        let pos = self.width * x + y;
+        let pos = self.width * y + x;
         self.pixels[pos]
+    }
+
+    fn save_ppm(self) {
+        let mut file = File::create("image.ppm").expect("File not found");
+        let mut contents = format!("P3\n{}, {}\n255\n", self.width, self.height);
+        for pixel in self.pixels {
+            contents = contents
+                + &(pixel.x as u8).to_string()
+                + " "
+                + &pixel.y.to_string()
+                + " "
+                + &pixel.z.to_string()
+                + "\n";
+        }
+        // println!("{}", contents);
+        file.write_all(contents.as_bytes())
+            .expect("Failed to write to file");
     }
 }
 
@@ -138,7 +157,7 @@ struct Environment {
 fn main() {
     let mut projectile = Projectile {
         position: Vector::new(0., 1., 0.),
-        velocity: Vector::new(1., 1., 0.).normalize(),
+        velocity: Vector::new(1., 1.8, 0.).normalize().scalar_mult(11.25),
     };
 
     let environment = Environment {
@@ -146,13 +165,23 @@ fn main() {
         wind: Vector::new(-0.01, 0., 0.),
     };
 
-    while projectile.position.y > 0. {
+    let mut canvas = Canvas::new(900, 550);
+    let color = Color::new(255., 0., 0.);
+    for _ in 0..canvas.width {
         projectile = tick(projectile, &environment);
-        println!(
-            "{}, {}, {}",
-            projectile.position.x, projectile.position.y, projectile.position.z
-        );
+        if canvas.width * (canvas.height - projectile.position.y as usize)
+            + (projectile.position.x as usize)
+            < canvas.pixels.len()
+        {
+            canvas.write_pixel(
+                projectile.position.x as usize,
+                canvas.height - (projectile.position.y as usize),
+                color,
+            );
+        }
     }
+
+    canvas.save_ppm();
 }
 
 fn tick(projectile: Projectile, environment: &Environment) -> Projectile {
@@ -172,10 +201,6 @@ mod tests {
 
     #[test]
     fn add() {
-        // let vec1 = Vector::new(3., -2., 5.);
-        // let vec2 = Vector::new(-2., 3., 1.);
-        // let result = Vector::add(vec1, vec2);
-        // let expected = Vector::new(1., 1., 6.);
         let vec1 = Vector::new(1.1, 2.2, 3.3);
         let vec2 = Vector::new(1.0, 5.0, 10.0);
         let result = Vector::add(vec1, vec2);
