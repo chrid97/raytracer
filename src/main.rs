@@ -1,4 +1,30 @@
-use std::{fs::File, io::Write, usize};
+use std::{fs::File, io::Write, ops::Index, usize};
+
+#[derive(Debug)]
+struct Matrix<const N: usize, const M: usize>([[f64; M]; N]);
+impl<const N: usize, const M: usize> From<[[f64; M]; N]> for Matrix<N, M> {
+    fn from(data: [[f64; M]; N]) -> Self {
+        Self(data)
+    }
+}
+
+impl<const N: usize, const M: usize> Index<usize> for Matrix<N, M> {
+    type Output = [f64; M];
+    fn index(&self, idx: usize) -> &[f64; M] {
+        &self.0[idx]
+    }
+}
+
+// review this later
+impl<const N: usize, const M: usize> PartialEq for Matrix<N, M> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0
+            .iter()
+            .flat_map(|x| x)
+            .zip(other.0.iter().flat_map(|y| y))
+            .all(|(x, y)| equal(x.clone(), y.clone()))
+    }
+}
 
 struct Canvas {
     width: usize,
@@ -128,20 +154,20 @@ impl Vector {
 
 impl PartialEq for Vector {
     fn eq(&self, vec2: &Vector) -> bool {
-        fn equal(a: f64, b: f64) -> bool {
-            if (a - b).abs() < 0.00001 {
-                return true;
-            }
-
-            false
-        }
-
         if equal(self.x, vec2.x) && equal(self.y, vec2.y) && equal(self.z, vec2.z) {
             return true;
         }
 
         false
     }
+}
+
+fn equal(a: f64, b: f64) -> bool {
+    if (a - b).abs() < 0.00001 {
+        return true;
+    }
+
+    false
 }
 
 struct Projectile {
@@ -316,5 +342,38 @@ mod tests {
             c.write_pixel(2, 3, red);
             assert_eq!(c.pixel_at(2, 3), red);
         }
+    }
+
+    #[test]
+    fn matrix() {
+        let m = Matrix::from([
+            [1., 2., 3., 4.],
+            [5.5, 6.5, 7.5, 8.5],
+            [9., 10., 11., 12.],
+            [13.5, 14.5, 15.5, 16.5],
+        ]);
+        let m2 = Matrix::from([
+            [1., 2., 3., 4.],
+            [5.5, 6.5, 7.5, 8.5],
+            [9., 10., 11., 12.],
+            [13.5, 14.5, 15.5, 16.5],
+        ]);
+        let m3 = Matrix::from([
+            [20., 22., 50., 48.],
+            [44., 54., 114., 108.],
+            [40., 58., 110., 102.],
+            [16., 26., 46., 42.],
+        ]);
+
+        assert_eq!(m[0][0], 1.);
+        assert_eq!(m[0][3], 4.);
+        assert_eq!(m[1][0], 5.5);
+        assert_eq!(m[1][2], 7.5);
+        assert_eq!(m[2][2], 11.);
+        assert_eq!(m[3][0], 13.5);
+        assert_eq!(m[3][2], 15.5);
+
+        assert_eq!(m, m2);
+        assert!(m != m3);
     }
 }
