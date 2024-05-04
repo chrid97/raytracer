@@ -1,4 +1,9 @@
-use std::{fs::File, io::Write, ops::Index, usize};
+use std::{
+    fs::File,
+    io::Write,
+    ops::{Index, IndexMut},
+    usize,
+};
 
 #[derive(Debug)]
 struct Matrix<const N: usize, const M: usize>([[f64; M]; N]);
@@ -8,10 +13,36 @@ impl<const N: usize, const M: usize> From<[[f64; M]; N]> for Matrix<N, M> {
     }
 }
 
+impl<const N: usize, const M: usize> Matrix<N, M> {
+    // currently only works for 4 by 4 matrix, figure out how to do this for any number
+    // although apparently for this book we'll only multiply 4x4 matrices
+    // it also says that multiplying the rows is the same as applying dot product to vectors
+    // so maybe i can do something with that 
+    fn mul(lhs: Self, rhs: Self) -> Self {
+        let mut matrix = Matrix::from([[0.; M]; N]);
+        for row in 0..N {
+            for col in 0..M {
+                matrix[row][col] = lhs[row][0] * rhs[0][col]
+                    + lhs[row][1] * rhs[1][col]
+                    + lhs[row][2] * rhs[2][col]
+                    + lhs[row][3] * rhs[3][col];
+            }
+        }
+
+        matrix
+    }
+}
+
 impl<const N: usize, const M: usize> Index<usize> for Matrix<N, M> {
     type Output = [f64; M];
     fn index(&self, idx: usize) -> &[f64; M] {
         &self.0[idx]
+    }
+}
+
+impl<const N: usize, const M: usize> IndexMut<usize> for Matrix<N, M> {
+    fn index_mut(&mut self, idx: usize) -> &mut [f64; M] {
+        &mut self.0[idx]
     }
 }
 
@@ -375,5 +406,29 @@ mod tests {
 
         assert_eq!(m, m2);
         assert!(m != m3);
+    }
+
+    #[test]
+    fn matrix_multiplication() {
+        let m1 = Matrix::from([
+            [1., 2., 3., 4.],
+            [5., 6., 7., 8.],
+            [9., 8., 7., 6.],
+            [5., 4., 3., 2.],
+        ]);
+        let m2 = Matrix::from([
+            [-2., 1., 2., 3.],
+            [3., 2., 1., -1.],
+            [4., 3., 6., 5.],
+            [1., 2., 7., 8.],
+        ]);
+        let expected = Matrix::from([
+            [20., 22., 50., 48.],
+            [44., 54., 114., 108.],
+            [40., 58., 110., 102.],
+            [16., 26., 46., 42.],
+        ]);
+
+        assert_eq!(Matrix::mul(m1, m2), expected);
     }
 }
