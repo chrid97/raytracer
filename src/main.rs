@@ -6,6 +6,28 @@ use std::{
 };
 
 #[derive(Debug)]
+struct Tuple([f64; 4]);
+impl Tuple {
+    fn new(a: f64, b: f64, c: f64, d: f64) -> Self {
+        Self([a, b, c, d])
+    }
+}
+
+impl PartialEq for Tuple {
+    fn eq(&self, t: &Tuple) -> bool {
+        if equal(self[0], t[0])
+            && equal(self[1], t[1])
+            && equal(self[2], t[2])
+            && equal(self[3], t[3])
+        {
+            return true;
+        }
+
+        false
+    }
+}
+
+#[derive(Debug)]
 struct Matrix<const N: usize, const M: usize>([[f64; M]; N]);
 impl<const N: usize, const M: usize> From<[[f64; M]; N]> for Matrix<N, M> {
     fn from(data: [[f64; M]; N]) -> Self {
@@ -17,7 +39,7 @@ impl<const N: usize, const M: usize> Matrix<N, M> {
     // currently only works for 4 by 4 matrix, figure out how to do this for any number
     // although apparently for this book we'll only multiply 4x4 matrices
     // it also says that multiplying the rows is the same as applying dot product to vectors
-    // so maybe i can do something with that 
+    // so maybe i can do something with that
     fn mul(lhs: Self, rhs: Self) -> Self {
         let mut matrix = Matrix::from([[0.; M]; N]);
         for row in 0..N {
@@ -30,6 +52,31 @@ impl<const N: usize, const M: usize> Matrix<N, M> {
         }
 
         matrix
+    }
+
+    // mul 4x4 matrix by a 4-tuple
+    fn mul_tuple(m: Matrix<4, 4>, rhs: Tuple) -> Tuple {
+        let mut t = Tuple::new(0., 0., 0., 0.);
+        for row in 0..4 {
+            for col in 0..4 {
+                t[row] += m[row][col] * rhs[col];
+            }
+        }
+
+        t
+    }
+}
+
+impl Index<usize> for Tuple {
+    type Output = f64;
+    fn index(&self, idx: usize) -> &f64 {
+        &self.0[idx]
+    }
+}
+
+impl IndexMut<usize> for Tuple {
+    fn index_mut(&mut self, idx: usize) -> &mut f64 {
+        &mut self.0[idx]
     }
 }
 
@@ -430,5 +477,15 @@ mod tests {
         ]);
 
         assert_eq!(Matrix::mul(m1, m2), expected);
+
+        let m = Matrix::from([
+            [1., 2., 3., 4.],
+            [2., 4., 4., 2.],
+            [8., 6., 4., 1.],
+            [0., 0., 0., 1.],
+        ]);
+        let t = Tuple::new(1., 2., 3., 1.);
+        let t_expected = Tuple::new(18., 24., 33., 1.);
+        assert_eq!(Matrix::<4,4>::mul_tuple(m, t), t_expected);
     }
 }
