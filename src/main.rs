@@ -27,7 +27,7 @@ impl PartialEq for Tuple {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Matrix<const N: usize, const M: usize>([[f64; M]; N]);
 impl<const N: usize, const M: usize> From<[[f64; M]; N]> for Matrix<N, M> {
     fn from(data: [[f64; M]; N]) -> Self {
@@ -64,6 +64,15 @@ impl<const N: usize, const M: usize> Matrix<N, M> {
         }
 
         t
+    }
+
+    fn identity() -> Matrix<4, 4> {
+        Matrix::<4, 4>([
+            [1., 0., 0., 0.],
+            [0., 1., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 0., 0., 1.],
+        ])
     }
 }
 
@@ -486,6 +495,25 @@ mod tests {
         ]);
         let t = Tuple::new(1., 2., 3., 1.);
         let t_expected = Tuple::new(18., 24., 33., 1.);
-        assert_eq!(Matrix::<4,4>::mul_tuple(m, t), t_expected);
+        assert_eq!(Matrix::<4, 4>::mul_tuple(m, t), t_expected);
+
+        let a = Matrix::<4, 4>::from([
+            [0., 1., 2., 4.],
+            [1., 2., 4., 8.],
+            [2., 4., 8., 16.],
+            [4., 8., 16., 32.],
+        ]);
+
+        // why do i need to give my identity matrix a type annotation
+        // the compiler says it can't infer it but identity() return a 4x4 matrix??
+        // so whats there to infer it should already have a type annotation
+        assert_eq!(
+            a,
+            Matrix::<4, 4>::mul(Matrix::<4, 4>::identity(), a.clone())
+        );
+        assert_eq!(
+            Matrix::<4, 4>::mul_tuple(Matrix::<4, 4>::identity(), Tuple::new(1., 2., 3., 4.)),
+            Tuple::new(1., 2., 3., 4.)
+        );
     }
 }
