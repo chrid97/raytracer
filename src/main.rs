@@ -74,6 +74,17 @@ impl<const N: usize, const M: usize> Matrix<N, M> {
             [0., 0., 0., 1.],
         ])
     }
+
+    fn transpose(self) -> Matrix<M, N> {
+        let mut res = [[0.; N]; M];
+        for row in 0..N {
+            for column in 0..M {
+                res[row][column] = self[column][row];
+            }
+        }
+
+        Matrix(res)
+    }
 }
 
 impl Index<usize> for Tuple {
@@ -515,5 +526,19 @@ mod tests {
             Matrix::<4, 4>::mul_tuple(Matrix::<4, 4>::identity(), Tuple::new(1., 2., 3., 4.)),
             Tuple::new(1., 2., 3., 4.)
         );
+
+        let a = Matrix::<4, 4>::from([
+            [0., 9., 3., 0.],
+            [9., 8., 0., 8.],
+            [1., 8., 5., 3.],
+            [0., 0., 5., 8.],
+        ]);
+        let expected = Matrix::<4, 4>::from([
+            [0., 9., 1., 0.],
+            [9., 8., 8., 0.],
+            [3., 0., 5., 5.],
+            [0., 8., 3., 8.],
+        ]);
+        assert_eq!(a.transpose(), expected);
     }
 }
