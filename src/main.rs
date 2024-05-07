@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     io::Write,
-    ops::{Index, IndexMut},
+    ops::{Deref, DerefMut, Index, IndexMut},
     usize,
 };
 
@@ -89,16 +89,16 @@ impl IndexMut<usize> for Tuple {
     }
 }
 
-impl<const N: usize, const M: usize> Index<usize> for Matrix<N, M> {
-    type Output = [f64; M];
-    fn index(&self, idx: usize) -> &[f64; M] {
-        &self.0[idx]
+impl<const N: usize, const M: usize> Deref for Matrix<N, M> {
+    type Target = [[f64; M]; N];
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-impl<const N: usize, const M: usize> IndexMut<usize> for Matrix<N, M> {
-    fn index_mut(&mut self, idx: usize) -> &mut [f64; M] {
-        &mut self.0[idx]
+impl<const N: usize, const M: usize> DerefMut for Matrix<N, M> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
